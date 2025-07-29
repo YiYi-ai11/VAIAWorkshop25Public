@@ -55,3 +55,68 @@ def plot_points_on_sphere(az: ArrayLike, el: ArrayLike):
     ax.set_zlim([-1.1, 1.1])
     plt.tight_layout()
     plt.show()
+
+
+def plot_spherical_harmonics(orders_list: List):
+    """
+    Plot spherical harmonic functions on the sphere for all orders in orders_list.
+
+    Parameters
+    ----------
+    orders_list : list of int
+        List of spherical harmonic orders to plot.
+
+    Returns
+    -------
+    None
+        This function displays the plot and does not return any value.
+    """
+    # Generate a spherical grid
+    n_theta = 200
+    n_phi = 100
+    theta = np.linspace(0, 2 * np.pi, n_phi)  # azimuth [0, 2π]
+    phi = np.linspace(-np.pi / 2, np.pi / 2, n_theta)  # colatitude [0, π]
+    theta_grid, phi_grid = np.meshgrid(theta, phi)
+
+    # Convert to cartesian for plotting - size is n_theta x n_phi
+    # Convert to cartesian for plotting
+    x = np.cos(theta_grid) * np.cos(phi_grid)
+    y = np.sin(theta_grid) * np.cos(phi_grid)
+    z = np.sin(phi_grid)
+
+    # Loop through SH orders 1 to 4
+    for order in orders_list:
+        n_coeffs = (order + 1)**2
+        # flatten the grid for sh evaluation
+        Y = spa.sph.sh_matrix(order, theta_grid.ravel(),
+                              np.pi / 2 - phi_grid.ravel(),
+                              'real')  # shape (N_pts, (N+1)^2)
+        fig = plt.figure(figsize=(6, 3 * n_coeffs))
+
+        for i in range(n_coeffs):
+            coeff = Y[:, i].reshape(theta_grid.shape)
+            coeff /= np.max(np.abs(coeff))  # normalize between +-1
+            r = 1
+
+            X = r * x
+            Y_ = r * y
+            Z = r * z
+
+            ax = fig.add_subplot(n_coeffs, 1, i + 1, projection='3d')
+            ax.plot_surface(
+                X,
+                Y_,
+                Z,
+                facecolors=plt.cm.seismic(
+                    (coeff + 1) /
+                    2),  # this maps coeffs to 0 to 1 from -1 to 1
+                rstride=1,
+                cstride=1,
+                antialiased=True,
+                linewidth=0,
+                edgecolor=None,
+            )
+            ax.set_title(f"Spherical Harmonic: order {order}, index {i}")
+            ax.set_axis_off()
+        plt.tight_layout()
+        plt.show()
